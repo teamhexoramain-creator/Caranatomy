@@ -74,8 +74,8 @@ function cameraKeys() {
   const k = [
     { t: 0.0, tgt: [1.15, 0.55, 0], dist: 6.2, az: 24, el: 3.5, fov: 30, shift: -0.13 },
     { t: 3.0, tgt: [0.6, 0.6, 0], dist: 7.6, az: 44, el: 6, fov: 30, shift: -0.12 },
-    { t: 6.0, tgt: [0.0, 0.66, 0], dist: 9.8, az: 80, el: 11, fov: 30, shift: -0.08 },
-    { t: 8.6, tgt: [0.0, 0.72, 0], dist: 10.4, az: 96, el: 15, fov: 30, shift: -0.08 },
+    { t: 6.0, tgt: [0.0, 0.66, 0], dist: 15.4, az: 78, el: 10, fov: 30, shift: -0.07 },
+    { t: 8.6, tgt: [0.0, 0.72, 0], dist: 15.9, az: 96, el: 14, fov: 30, shift: -0.07 },
     { t: 11.3, tgt: [0.1, 2.25, 0], dist: 16.0, az: 42, el: 17, fov: 30, shift: -0.1 },
     { t: 12.5, tgt: [0.1, 2.25, 0], dist: 15.8, az: 37, el: 17, fov: 30, shift: -0.1 },
   ];
