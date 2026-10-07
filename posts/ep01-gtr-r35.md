@@ -1,6 +1,6 @@
 # EP.01 — Nissan GT-R R35: Facebook post
 
-**Video:** `renders/gtr-r35-anatomy.mp4` (1080×1920, 30 fps, ~50 s), uploaded as a Reel.
+**Video:** `renders/gtr-r35-anatomy.mp4` (1080×1920, 30 fps, 50 s; `renders/gtr-r35-anatomy-fb.mp4` is a lighter 27 MB copy), uploaded as a Reel.
 **Cover frame:** `renders/cover.jpg` (the exploded view).
 
 ## Caption
