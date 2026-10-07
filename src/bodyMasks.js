@@ -14,15 +14,40 @@ float sdPoly${N}(vec2 p, vec2 v[${N}]) {
   return s * sqrt(d);
 }`;
 
+// Shared outlines (x, y) / (x, z) in car space; also used on the CPU to split the mesh.
+export const POLY = {
+  DLO: [[0.545, 0.978], [-0.06, 1.252], [-0.93, 1.262], [-1.13, 1.205], [-1.305, 1.075], [-1.33, 1.035], [-0.62, 1.0], [0.2, 0.985]],
+  WS: [[0.585, -0.70], [0.585, 0.70], [-0.165, 0.575], [-0.165, -0.575]],
+  RS: [[-1.03, -0.50], [-1.03, 0.50], [-1.66, 0.45], [-1.66, -0.45]],
+  DOOR: [[0.655, 0.98], [0.69, 0.40], [0.62, 0.235], [-0.60, 0.235], [-0.64, 1.005]],
+  HL: [[2.43, 0.40], [2.39, 0.62], [2.26, 0.84], [2.10, 0.945], [1.90, 0.995], [1.87, 0.925], [1.99, 0.865], [2.13, 0.745], [2.23, 0.585], [2.27, 0.40]],
+};
+const glslPoly = (name) => `const vec2 ${name}[${POLY[name].length}] = vec2[${POLY[name].length}](${POLY[name].map(([a, b]) => `vec2(${a.toFixed(4)}, ${b.toFixed(4)})`).join(', ')});`;
+
+function sdPolyJS(px, py, v) {
+  let d = (px - v[0][0]) ** 2 + (py - v[0][1]) ** 2, s = 1;
+  for (let i = 0, j = v.length - 1; i < v.length; j = i, i++) {
+    const ex = v[j][0] - v[i][0], ey = v[j][1] - v[i][1], wx = px - v[i][0], wy = py - v[i][1];
+    const t = Math.min(1, Math.max(0, (wx * ex + wy * ey) / (ex * ex + ey * ey)));
+    d = Math.min(d, (wx - ex * t) ** 2 + (wy - ey * t) ** 2);
+    const c1 = py >= v[i][1], c2 = py < v[j][1], c3 = ex * wy > ey * wx;
+    if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) s = -s;
+  }
+  return s * Math.sqrt(d);
+}
+
+/** CPU twin of the glass term in bodyMasks() (without the B-pillar cut). */
+export function glassDistance(x, y, z, nx, ny, nz) {
+  const NK = 0.08, anz = Math.abs(nz);
+  const side = Math.max(sdPolyJS(x, y, POLY.DLO), NK * (0.45 - anz), 0.9 - y);
+  const ws = Math.max(sdPolyJS(x, z, POLY.WS), NK * (0.25 - ny), NK * (0.12 - nx), 0.93 - y);
+  const rs = Math.max(sdPolyJS(x, z, POLY.RS), NK * (0.25 - ny), NK * (nx + 0.05), 1.0 - y);
+  return Math.min(side, ws, rs);
+}
+
 export const BODY_MASKS_GLSL = /* glsl */`
 const float ARCH_R = 0.392;
-const vec2 DLO[8] = vec2[8](vec2(0.545, 0.978), vec2(-0.06, 1.252), vec2(-0.93, 1.262), vec2(-1.13, 1.205),
-  vec2(-1.305, 1.075), vec2(-1.33, 1.035), vec2(-0.62, 1.0), vec2(0.2, 0.985));
-const vec2 WS[4] = vec2[4](vec2(0.585, -0.70), vec2(0.585, 0.70), vec2(-0.165, 0.575), vec2(-0.165, -0.575));
-const vec2 RS[4] = vec2[4](vec2(-1.03, -0.50), vec2(-1.03, 0.50), vec2(-1.66, 0.45), vec2(-1.66, -0.45));
-const vec2 DOOR[5] = vec2[5](vec2(0.655, 0.98), vec2(0.69, 0.40), vec2(0.62, 0.235), vec2(-0.60, 0.235), vec2(-0.64, 1.005));
-const vec2 HL[10] = vec2[10](vec2(2.43, 0.40), vec2(2.39, 0.62), vec2(2.26, 0.84), vec2(2.10, 0.945), vec2(1.90, 0.995),
-  vec2(1.87, 0.925), vec2(1.99, 0.865), vec2(2.13, 0.745), vec2(2.23, 0.585), vec2(2.27, 0.40));
+${Object.keys(POLY).map(glslPoly).join('\n')}
 
 ${[4, 5, 8, 10].map(polyFn).join('\n')}
 

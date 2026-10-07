@@ -5,7 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { buildStudioEnvironment } from './env.js';
-import { loadBodyGeometry, makeBodyMaterials, makeBody, bodyUniforms } from './body.js';
+import { loadBodyGeometry, makeBodyMaterials, makeBody, bodyUniforms, setCutEnabled } from './body.js';
 import { makeCorner } from './wheels.js';
 import { radialShadowTexture } from './textures.js';
 import { GradePass } from './grade.js';
@@ -142,6 +142,9 @@ composer.addPass(new OutputPass());
 const smaa = new SMAAPass();
 composer.addPass(smaa);
 
+if (params.get('noshadow')) renderer.shadowMap.enabled = false;
+if (params.get('nobloom')) bloom.enabled = false;
+if (params.get('nosmaa')) smaa.enabled = false;
 const overlay = new Overlay(document.getElementById('overlay'));
 if (params.get('nooverlay')) document.getElementById('overlay').style.display = 'none';
 
@@ -205,8 +208,10 @@ function applyScene(t) {
   const xrayOn = t >= T.scan[0] && t < T.scanBack[1];
   bodyUniforms.uXray.value = xrayOn ? 1 - 0.7 * anyFocus : 0;
   body.userData.xray.visible = xrayOn;
-  body.userData.paint.visible = cut > -2.55;
-  body.userData.glass.visible = cut > -2.55;
+  const paintOn = cut > -2.55;
+  body.userData.paint.visible = body.userData.border.visible = body.userData.glass.visible = paintOn;
+  body.userData.shell.visible = cut > 50;
+  setCutEnabled(body.userData.mats, paintOn && cut < 50);
 
   // explode / reassemble
   for (const [name, s] of Object.entries(systems)) {

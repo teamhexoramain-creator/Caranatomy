@@ -2,7 +2,7 @@
 // materials on top of it (paint, glass, x-ray ghost). Material regions come
 // from BODY_MASKS_GLSL and are resolved per pixel.
 import * as THREE from 'three';
-import { BODY_MASKS_GLSL } from './bodyMasks.js';
+import { BODY_MASKS_GLSL, glassDistance } from './bodyMasks.js';
 
 export const bodyUniforms = {
   uCut: { value: 99 },        // paint is drawn where x < uCut, x-ray where x > uCut
@@ -58,15 +58,18 @@ ${BODY_MASKS_GLSL}
 `;
 
 function paintFragMain(mode) {
-  // mode 0 = opaque paint pass, mode 1 = glass pass
+  // mode 0 = opaque paint away from the windows (no discard -> early depth test),
+  // mode 1 = glass pass, mode 2 = paint on triangles that border the glass
   return /* glsl */`
+  #ifdef USE_CUT
   if (vOP.x > uCut) discard;
+  #endif
   BodyMask bm = bodyMasks(vOP, normalize(vON));
   float isGlass = inside(bm.glass);
-  ${mode === 0 ? 'if (isGlass > 0.5) discard;' : 'if (isGlass < 0.5 || !gl_FrontFacing) discard;'}
+  ${mode === 2 ? 'if (isGlass > 0.5) discard;' : mode === 1 ? 'if (isGlass < 0.5 || !gl_FrontFacing) discard;' : ''}
   float ccOut = clearcoat;
   vec3 emis = vec3(0.0);
-  ${mode === 0 ? /* glsl */`
+  ${mode !== 1 ? /* glsl */`
   vec3 col = diffuseColor.rgb;
   float rough = roughnessFactor, metal = metalnessFactor;
   // satin black trim
@@ -122,15 +125,28 @@ function patchPaint(material, mode) {
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += emis;');
   };
   material.customProgramCacheKey = () => 'gtr-paint-' + mode;
+  material.defines = {};
+}
+
+/** toggles the scan cut (a discard) only while a scan is on screen */
+export function setCutEnabled(mats, on) {
+  for (const m of [mats.paint, mats.border, mats.glass]) {
+    if (('USE_CUT' in m.defines) === on) continue;
+    if (on) m.defines.USE_CUT = ''; else delete m.defines.USE_CUT;
+    m.needsUpdate = true;
+  }
 }
 
 export function makeBodyMaterials(paintColor = 0x8a9097) {
-  const paint = new THREE.MeshPhysicalMaterial({
+  const paintParams = {
     color: paintColor, metalness: 0.55, roughness: 0.34,
     clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0,
-    side: THREE.DoubleSide,
-  });
+  };
+  const paint = new THREE.MeshPhysicalMaterial(paintParams);
   patchPaint(paint, 0);
+  const border = new THREE.MeshPhysicalMaterial({ ...paintParams, side: THREE.DoubleSide });
+  patchPaint(border, 2);
+  const shell = new THREE.MeshBasicMaterial({ color: 0x030303, side: THREE.BackSide });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x020304, metalness: 0.0, roughness: 0.02, clearcoat: 1.0, clearcoatRoughness: 0.0,
     transparent: true, opacity: 0.62, depthWrite: false, envMapIntensity: 2.2,
@@ -168,30 +184,44 @@ export function makeBodyMaterials(paintColor = 0x8a9097) {
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
-  return { paint, glass, xray };
+  return { paint, border, glass, shell, xray };
 }
 
 export function makeBody(geometry, mats) {
   const group = new THREE.Group();
   group.name = 'body';
-  const paint = new THREE.Mesh(geometry, mats.paint);
-  paint.castShadow = true;
-  // the glass pass only needs the greenhouse triangles
-  const pos = geometry.attributes.position.array, idx = geometry.index.array;
-  const keep = [];
-  for (let i = 0; i < idx.length; i += 3) {
-    if (pos[idx[i] * 3 + 1] > 0.9 || pos[idx[i + 1] * 3 + 1] > 0.9 || pos[idx[i + 2] * 3 + 1] > 0.9) keep.push(idx[i], idx[i + 1], idx[i + 2]);
+  // split the shell: triangles near the glass need the per-pixel discard, the rest
+  // stay discard-free so hidden fragments are rejected before shading
+  const pos = geometry.attributes.position.array, nor = geometry.attributes.normal.array, idx = geometry.index.array;
+  const nearGlass = new Uint8Array(pos.length / 3);
+  for (let v = 0; v < nearGlass.length; v++) {
+    const y = pos[v * 3 + 1];
+    if (y < 0.85) continue;
+    nearGlass[v] = glassDistance(pos[v * 3], y, pos[v * 3 + 2], nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]) < 0.035 ? 1 : 0;
   }
-  const glassGeo = new THREE.BufferGeometry();
-  glassGeo.setAttribute('position', geometry.attributes.position);
-  glassGeo.setAttribute('normal', geometry.attributes.normal);
-  glassGeo.setIndex(new THREE.BufferAttribute(new Uint32Array(keep), 1));
-  glassGeo.boundingSphere = geometry.boundingSphere;
-  const glass = new THREE.Mesh(glassGeo, mats.glass);
+  const main = [], edge = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const tgt = nearGlass[idx[i]] || nearGlass[idx[i + 1]] || nearGlass[idx[i + 2]] ? edge : main;
+    tgt.push(idx[i], idx[i + 1], idx[i + 2]);
+  }
+  const sub = (list) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', geometry.attributes.position);
+    g.setAttribute('normal', geometry.attributes.normal);
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(list), 1));
+    g.boundingSphere = geometry.boundingSphere;
+    return g;
+  };
+  const mainGeo = sub(main), edgeGeo = sub(edge);
+  const paint = new THREE.Mesh(mainGeo, mats.paint);
+  const border = new THREE.Mesh(edgeGeo, mats.border);
+  const shell = new THREE.Mesh(mainGeo, mats.shell);
+  paint.castShadow = border.castShadow = true;
+  const glass = new THREE.Mesh(edgeGeo, mats.glass);
   glass.renderOrder = 2;
   const xray = new THREE.Mesh(geometry, mats.xray);
   xray.renderOrder = 3;
-  group.add(paint, glass, xray);
-  group.userData = { paint, glass, xray };
+  group.add(paint, border, shell, glass, xray);
+  group.userData = { paint, border, shell, glass, xray, mats };
   return group;
 }
