@@ -1,0 +1,28 @@
+{
+  "name": "caranatomy",
+  "version": "1.0.0",
+  "description": "3D car anatomy animations for social video — EP.01 Nissan GT-R R35",
+  "scripts": {
+    "build:model": "python3 model/build_body.py 0.006",
+    "cues": "node -e \"import('./src/story.js').then(m=>require('fs').writeFileSync('build/cues.json',JSON.stringify(m.cues())))\"",
+    "build:audio": "npm run cues && python3 scripts/soundtrack.py build/cues.json build/soundtrack.wav 50",
+    "serve": "node scripts/server.mjs 8080",
+    "preview": "node scripts/render.mjs --fps 15 --pr 0.5 --out build/preview --encode build/preview.mp4",
+    "render": "node scripts/render.mjs --fps 30 --pr 1 --out build/frames --encode build/gtr-r35-anatomy.mp4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teamhexoramain-creator/Caranatomy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teamhexoramain-creator/Caranatomy/issues"
+  },
+  "homepage": "https://github.com/teamhexoramain-creator/Caranatomy#readme",
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "type": "module"
+}

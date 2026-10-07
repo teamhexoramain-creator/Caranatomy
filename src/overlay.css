@@ -1,0 +1,96 @@
+@import url('../public/fonts/fonts.css');
+
+:root {
+  --accent: #ff7a1a;
+  --xray: #4fc3ff;
+  --ink: #f4f6fa;
+  --dim: rgba(244, 246, 250, 0.62);
+  --cond: 'Barlow Condensed', 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --si: 'Noto Sans Sinhala', 'Inter', sans-serif;
+}
+
+html, body { margin: 0; padding: 0; background: #050608; overflow: hidden; }
+#c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#overlay { position: fixed; inset: 0; pointer-events: none; color: var(--ink); font-family: var(--cond); }
+#overlay * { box-sizing: border-box; }
+.o { position: absolute; will-change: opacity, transform; opacity: 0; }
+
+/* viewfinder corners */
+.frame { inset: 150px 44px 300px 44px; }
+.frame i { position: absolute; width: 38px; height: 38px; border-color: rgba(255,255,255,0.28); border-style: solid; border-width: 0; }
+.frame i:nth-child(1) { left: 0; top: 0; border-left-width: 2px; border-top-width: 2px; }
+.frame i:nth-child(2) { right: 0; top: 0; border-right-width: 2px; border-top-width: 2px; }
+.frame i:nth-child(3) { left: 0; bottom: 0; border-left-width: 2px; border-bottom-width: 2px; }
+.frame i:nth-child(4) { right: 0; bottom: 0; border-right-width: 2px; border-bottom-width: 2px; }
+
+/* intro title */
+.intro { left: 70px; right: 70px; top: 250px; }
+.intro .tag { font-family: var(--mono); font-size: 26px; letter-spacing: 0.32em; color: var(--dim); display: flex; align-items: center; gap: 18px; }
+.intro .tag b { display: inline-block; width: 46px; height: 4px; background: var(--accent); }
+.intro .tag span { color: var(--accent); }
+.intro .make { font-size: 46px; font-weight: 700; letter-spacing: 0.55em; margin-top: 34px; color: var(--ink); }
+.intro .model { display: flex; align-items: baseline; gap: 26px; margin-top: -8px; }
+.intro .gtr { font-size: 250px; font-weight: 800; font-style: italic; line-height: 0.95; letter-spacing: -0.01em;
+  background: linear-gradient(180deg, #ffffff 30%, #9aa3ae 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.intro .r35 { font-size: 120px; font-weight: 800; font-style: italic; color: transparent; -webkit-text-stroke: 2.5px var(--accent); }
+.intro .nick { font-family: var(--mono); font-size: 24px; letter-spacing: 0.4em; color: var(--accent); margin-top: 6px; }
+.intro .si { font-family: var(--si); font-weight: 700; font-size: 44px; margin-top: 30px; color: var(--ink); text-shadow: 0 2px 24px rgba(0,0,0,0.8); }
+
+/* persistent header */
+.header { left: 70px; right: 70px; top: 200px; display: flex; flex-direction: column; gap: 14px; }
+.header .row { display: flex; justify-content: space-between; align-items: baseline; }
+.header .brand { font-size: 34px; font-weight: 800; font-style: italic; letter-spacing: 0.04em; }
+.header .brand span { color: var(--accent); }
+.header .ep { font-family: var(--mono); font-size: 20px; letter-spacing: 0.3em; color: var(--dim); }
+.header .bars { display: flex; gap: 10px; }
+.header .bars div { flex: 1; height: 4px; background: rgba(255,255,255,0.16); position: relative; overflow: hidden; }
+.header .bars div span { position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+
+/* centred captions */
+.caption { left: 70px; right: 70px; top: 300px; text-align: left; }
+.caption .k { font-family: var(--mono); font-size: 24px; letter-spacing: 0.35em; color: var(--xray); }
+.caption .t { font-size: 104px; font-weight: 800; font-style: italic; line-height: 1; margin-top: 10px; letter-spacing: 0.01em; }
+.caption .si { font-family: var(--si); font-weight: 700; font-size: 40px; margin-top: 18px; color: var(--ink); }
+
+/* spec card */
+.card { left: 70px; right: 70px; top: 1150px; }
+.card .head { display: flex; align-items: flex-end; gap: 22px; }
+.card .idx { font-size: 130px; font-weight: 800; font-style: italic; line-height: 0.8; color: transparent; -webkit-text-stroke: 2px var(--accent); }
+.card .title { font-size: 88px; font-weight: 800; font-style: italic; line-height: 0.86; letter-spacing: 0.005em; }
+.card .sub { font-family: var(--mono); font-size: 24px; letter-spacing: 0.16em; color: var(--accent); margin-top: 18px; }
+.card .rule { height: 2px; margin: 24px 0 22px; background: linear-gradient(90deg, var(--accent), rgba(255,122,26,0.0)); transform-origin: left; }
+.card .stats { display: flex; gap: 46px; }
+.card .stat .v { font-size: 92px; font-weight: 700; line-height: 0.9; font-variant-numeric: tabular-nums; }
+.card .stat .u { font-family: var(--mono); font-size: 22px; letter-spacing: 0.18em; color: var(--dim); margin-top: 8px; }
+.card .note { font-size: 34px; font-weight: 500; color: var(--dim); margin-top: 22px; letter-spacing: 0.02em; }
+.card .si { font-family: var(--si); font-weight: 700; font-size: 36px; margin-top: 14px; color: var(--ink); line-height: 1.35; }
+.card .split { margin-top: 4px; width: 100%; }
+.card .split .lbl { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 22px; letter-spacing: 0.2em; color: var(--dim); }
+.card .split .bar { display: flex; height: 22px; margin: 12px 0 10px; gap: 6px; }
+.card .split .f { background: var(--xray); box-shadow: 0 0 18px rgba(79,195,255,0.7); }
+.card .split .r { background: var(--accent); box-shadow: 0 0 18px rgba(255,122,26,0.6); flex: 1; }
+.card .split .pct { display: flex; justify-content: space-between; font-size: 76px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.card .split .pct span:first-child { color: var(--xray); }
+.card .split .pct span:last-child { color: var(--accent); }
+
+/* leader line from the 3D anchor to the card */
+svg.leader { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; overflow: visible; }
+
+/* outro */
+.outro { left: 70px; right: 70px; top: 250px; }
+.outro .make { font-size: 40px; font-weight: 700; letter-spacing: 0.55em; }
+.outro .gtr { font-size: 170px; font-weight: 800; font-style: italic; line-height: 0.95; }
+.outro .gtr span { color: transparent; -webkit-text-stroke: 2.5px var(--accent); font-size: 110px; margin-left: 18px; }
+.outro .specs { display: flex; gap: 0; margin-top: 26px; border-top: 1px solid rgba(255,255,255,0.18); border-bottom: 1px solid rgba(255,255,255,0.18); }
+.outro .specs div { flex: 1; padding: 18px 0 16px; text-align: center; border-right: 1px solid rgba(255,255,255,0.18); }
+.outro .specs div:last-child { border-right: 0; }
+.outro .specs b { display: block; font-size: 60px; font-weight: 700; line-height: 1; }
+.outro .specs i { display: block; font-style: normal; font-family: var(--mono); font-size: 18px; letter-spacing: 0.2em; color: var(--dim); margin-top: 8px; }
+.cta { left: 70px; right: 70px; top: 1290px; }
+.cta .t { font-size: 70px; font-weight: 800; font-style: italic; }
+.cta .t span { color: var(--accent); }
+.cta .si { font-family: var(--si); font-weight: 700; font-size: 40px; margin-top: 12px; }
+.cta .pill { display: inline-block; margin-top: 26px; padding: 14px 28px; border: 2px solid var(--accent); font-family: var(--mono); font-size: 22px; letter-spacing: 0.3em; color: var(--ink); }
+
+.disclaimer { left: 70px; right: 70px; bottom: 282px; font-family: var(--mono); font-size: 15px; letter-spacing: 0.08em; color: rgba(255,255,255,0.35); }
