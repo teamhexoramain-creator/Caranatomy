@@ -1,6 +1,6 @@
 // HTML/CSS motion-graphics layer drawn over the WebGL canvas. Every style is a
 // pure function of t, so screenshots of the page are deterministic frames.
-import { SEGMENTS, segTime, T, DURATION } from './story.js';
+import { SEGMENTS, segTime, T, DURATION, PAGE } from './story.js';
 import { clamp01, smooth, window01, easeOut, easeOutBack, lerp } from './anim.js';
 
 const h = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
@@ -11,7 +11,7 @@ export class Overlay {
     this.frame = root.appendChild(h('<div class="o frame"><i></i><i></i><i></i><i></i></div>'));
     this.intro = root.appendChild(h(`
       <div class="o intro">
-        <div class="tag"><b></b>CAR ANATOMY <span>· EP.01</span></div>
+        <div class="tag"><b></b>${PAGE} <span>· EP.01</span></div>
         <div class="make">NISSAN</div>
         <div class="model"><div class="gtr">GT-R</div><div class="r35">R35</div></div>
         <div class="nick">“GODZILLA”</div>
@@ -63,7 +63,7 @@ export class Overlay {
       <div class="o cta">
         <div class="t">NEXT CAR <span>?</span></div>
         <div class="si">ඊළඟට මොන කාර් එකේ ඇනටමි එකද? Comment කරන්න</div>
-        <div class="pill">FOLLOW FOR EP.02</div>
+        <div class="pill">FOLLOW ${PAGE}</div>
       </div>`));
     this.disc = root.appendChild(h('<div class="o disclaimer">Fan-made 3D illustration · not affiliated with Nissan · specs: GT-R R35 MY2017+</div>'));
   }

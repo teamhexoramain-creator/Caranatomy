@@ -1,4 +1,4 @@
-# EP.01 — Nissan GT-R R35: Facebook post
+# EP.01 — Nissan GT-R R35: Facebook post (Auto Anatomy Ai)
 
 **Video:** `renders/gtr-r35-anatomy.mp4` (1080×1920, 30 fps, 50 s; `renders/gtr-r35-anatomy-fb.mp4` is a lighter 27 MB copy), uploaded as a Reel.
 **Cover frame:** `renders/cover.jpg` (the exploded view).
@@ -6,13 +6,13 @@
 ## Caption
 
 ```
-🔧 CAR ANATOMY | EP.01 — NISSAN GT-R R35 "GODZILLA"
+🔧 AUTO ANATOMY AI | EP.01 — NISSAN GT-R R35 "GODZILLA"
 
 GT-R එකක් ඇතුළේ මොනවද තියෙන්නේ? 👀
 එන්ජිමේ ඉඳන් බ්‍රේක් දක්වා, හැම කොටසක්ම එකින් එක 3D වලින් 🔥
 
 ⚙️ VR38DETT 3.8L Twin-Turbo V6 — 570 PS / 637 Nm
-   (හැම එන්ජිමක්ම එකම "Takumi" ශිල්පියෙක් අතින් එකලස් කරනවා)
+   හැම එන්ජිමක්ම එකම "Takumi" ශිල්පියෙක් අතින් එකලස් කරනවා
 🌀 Twin IHI Turbos — සිලින්ඩර් පේළි දෙකට වෙන වෙනම ටර්බෝ
 🔁 GR6 6-Speed Dual-Clutch — ගියර් පෙට්ටිය පිටුපසට දාලා බර සමබර කරලා
 🛞 ATTESA E-TS AWD — ග්‍රිප් අඩු වෙද්දී ඉස්සරහ රෝදවලටත් බලය (50:50 දක්වා)
@@ -20,8 +20,17 @@ GT-R එකක් ඇතුළේ මොනවද තියෙන්නේ? 👀
 🧲 Bilstein DampTronic — Comfort · Normal · R modes
 
 ඊළඟට මොන කාර් එකේ ඇනටමි එක බලන්න ඕනෙද? 👇 Comment කරන්න!
+🔔 තවත් කාර් ඇනටමි වීඩියෝ වලට Auto Anatomy Ai Follow කරන්න
 
-#CarAnatomy #NissanGTR #GTR #R35 #Godzilla #VR38DETT #JDM #CarLovers #SriLanka #3DAnimation
+#AutoAnatomyAI #CarAnatomy #NissanGTR #GTR #R35 #Godzilla #VR38DETT #JDM #CarLovers #SriLanka #3DAnimation
+```
+
+### Short version (if you want less text on the Reel)
+
+```
+GT-R R35 එකක් ඇතුළේ මොනවද තියෙන්නේ? 👀🔥 EP.01 | Auto Anatomy Ai
+ඊළඟ කාර් එක Comment කරන්න 👇
+#AutoAnatomyAI #NissanGTR #R35 #JDM #CarAnatomy #SriLanka
 ```
 
 *Fan-made 3D illustration, not affiliated with Nissan. Specs: GT-R R35 MY2017+.*

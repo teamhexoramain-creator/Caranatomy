@@ -2,6 +2,7 @@
 // Everything here is a pure function of time t (seconds) so any frame can be
 // rendered independently and the soundtrack can be generated from the same cues.
 
+export const PAGE = 'AUTO ANATOMY AI'; // Facebook page shown in the intro tag and the outro
 export const FPS = 30;
 export const DURATION = 50;
 
