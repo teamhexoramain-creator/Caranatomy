@@ -9,10 +9,9 @@ import { loadBodyGeometry, makeBodyMaterials, makeBody, bodyUniforms, setCutEnab
 import { makeCorner } from './wheels.js';
 import { radialShadowTexture } from './textures.js';
 import { GradePass } from './grade.js';
-import { buildAnatomy } from './parts.js';
 import { makeFocusSet, focusMaterial } from './materials.js';
-import { offsetFor, EXPLODE_ORDER } from './layout.js';
-import { CAMERA_KEYS, SEGMENTS, segTime, T, DURATION, FPS, cues } from './story.js';
+import { offsetFor } from './layout.js';
+import { CAMERA_KEYS, SEGMENTS, segTime, T, DURATION, FPS, cues, CAR } from './story.js';
 import { multiTrack, clamp01, smooth, window01, range, lerp, easeInOut } from './anim.js';
 import { Overlay } from './overlay.js';
 
@@ -68,22 +67,22 @@ scene.add(anatomyKey, anatomyRim);
 const car = new THREE.Group();
 scene.add(car);
 const contact = new THREE.Mesh(
-  new THREE.PlaneGeometry(2.5, 5.4),
+  new THREE.PlaneGeometry(...CAR.contactShadow),
   new THREE.MeshBasicMaterial({ map: radialShadowTexture(), transparent: true, depthWrite: false, opacity: 0.85 }),
 );
 contact.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
 contact.position.y = 0.002;
 car.add(contact);
 
-const bodyGeo = await loadBodyGeometry('public/assets/body.bin');
-const body = makeBody(bodyGeo, makeBodyMaterials(Number(params.get('paint') || 0x8a9097)));
+const bodyGeo = await loadBodyGeometry(CAR.bodyAsset);
+const body = makeBody(bodyGeo, makeBodyMaterials(Number(params.get('paint') || CAR.paint), CAR.masks, CAR.paintOpts), CAR.masks);
 car.add(body);
 
 const corners = {};
-for (const [name, x, front] of [['fl', 1.39, true], ['fr', 1.39, true], ['rl', -1.39, false], ['rr', -1.39, false]]) {
+for (const [name, x, front] of [['fl', CAR.axles.front, true], ['fr', CAR.axles.front, true], ['rl', CAR.axles.rear, false], ['rr', CAR.axles.rear, false]]) {
   const side = name.endsWith('r') ? 1 : -1;
-  const c = makeCorner({ front, side });
-  c.position.set(x, 0.355, side * ((front ? 1.59 : 1.6) / 2));
+  const c = makeCorner({ front, side, spec: CAR.wheels });
+  c.position.set(x, CAR.wheelY, side * ((front ? CAR.track.front : CAR.track.rear) / 2));
   c.userData.home = c.position.clone();
   c.userData.side = side;
   car.add(c);
@@ -91,7 +90,7 @@ for (const [name, x, front] of [['fl', 1.39, true], ['fr', 1.39, true], ['rl', -
 }
 
 // ---------------------------------------------------------------- anatomy
-const systems = buildAnatomy();
+const systems = CAR.buildAnatomy();
 for (const s of Object.values(systems)) car.add(s);
 const brakesSet = makeFocusSet(0xff7a1a), wheelsSet = makeFocusSet(0xffffff), rotorSet = makeFocusSet(0x000000);
 brakesSet.uGlowColor.value.multiplyScalar(0.5);
@@ -108,7 +107,7 @@ for (const [n, s] of Object.entries(systems)) focusSets[n] = s.userData.set;
 // torque-flow pulses for the ATTESA segment
 const pulseMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 3.6, 6.0), toneMapped: true });
 const pulseGeo = new THREE.SphereGeometry(0.026, 16, 10);
-const flows = systems.awd.userData.flows.map((f) => {
+const flows = (systems.awd?.userData.flows || []).map((f) => {
   const curve = new THREE.CatmullRomCurve3(f.pts);
   const balls = Array.from({ length: Math.max(3, Math.round(curve.getLength() * 3)) }, () => {
     const m = new THREE.Mesh(pulseGeo, pulseMat);
@@ -122,7 +121,7 @@ const flows = systems.awd.userData.flows.map((f) => {
 function anchorOf(name) {
   if (name === 'brakes') {
     const c = corners.fr;
-    return c.position.clone().add(new THREE.Vector3(-0.17, 0.12, -0.03));
+    return c.position.clone().add(new THREE.Vector3(...CAR.brakeAnchor));
   }
   const s = systems[name];
   return s.userData.anchor.clone().add(s.position);
@@ -169,8 +168,8 @@ function setCamera(t) {
 }
 
 function explodeK(name, t) {
-  const i = Math.max(0, EXPLODE_ORDER.indexOf(name));
-  const n = EXPLODE_ORDER.length;
+  const i = Math.max(0, CAR.explodeOrder.indexOf(name));
+  const n = CAR.explodeOrder.length;
   const out = range(t, T.explode + i * 0.13, T.explode + i * 0.13 + 1.7);
   const back = range(t, T.reassemble + 0.5 + (n - 1 - i) * 0.12, T.reassemble + 0.5 + (n - 1 - i) * 0.12 + 1.6);
   return out * (1 - back);
@@ -215,15 +214,15 @@ function applyScene(t) {
 
   // explode / reassemble
   for (const [name, s] of Object.entries(systems)) {
-    s.position.copy(offsetFor(name, explodeK(name, t)));
+    s.position.copy(offsetFor(CAR.explode, name, explodeK(name, t)));
     // the system in focus slides out of the stack towards the camera
     const seg = SEGMENTS.find((g) => g.sys === name && g.pop);
     if (seg) s.position.addScaledVector(tmp.set(...seg.pop), easeInOut(clamp01(w[name] || 0)));
   }
-  body.position.copy(offsetFor('body', explodeK('body', t)));
+  body.position.copy(offsetFor(CAR.explode, 'body', explodeK('body', t)));
   const kw = explodeK('wheels', t);
   for (const c of Object.values(corners)) {
-    c.position.copy(c.userData.home).add(offsetFor('wheels', kw, c.userData.side));
+    c.position.copy(c.userData.home).add(offsetFor(CAR.explode, 'wheels', kw, c.userData.side));
     // slide the wheel off the hub to reveal the brake
     c.userData.wheel.position.z = 0.95 * easeInOut(clamp01(w.brakes || 0));
   }
@@ -235,7 +234,9 @@ function applyScene(t) {
     set.uDim.value = Math.max(0, anyFocus - own) * 0.85;
   }
   focusSets.wheels.uDim.value = Math.max(focusSets.wheels.uDim.value, (w.brakes || 0) * 0.5);
-  systems.turbos.userData.hot.emissiveIntensity = 0.15 + 2.6 * (w.turbos || 0) * (0.85 + 0.15 * Math.sin(t * 9));
+  const hot = systems.turbos?.userData.hot;
+  if (hot) hot.emissiveIntensity = 0.15 + 2.6 * (w.turbos || 0) * (0.85 + 0.15 * Math.sin(t * 9));
+  CAR.animate?.({ t, w, systems, corners });
 
   // torque-flow pulses
   const [aw] = segTime(SEGMENTS.findIndex((s) => s.sys === 'awd'));
@@ -290,7 +291,7 @@ window.__renderFrame = (t) => {
   }
   composer.render();
 };
-window.__meta = { fps: FPS, duration: DURATION, cues: cues() };
+window.__meta = { fps: FPS, duration: DURATION, cues: cues(), ep: params.get('ep') || 'ep01' };
 window.__ready = true;
 
 // interactive preview when opened in a normal browser: ?play=1

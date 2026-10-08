@@ -1,5 +1,5 @@
 // Renders the animation frame-by-frame in headless Chromium and encodes the MP4.
-//   node scripts/render.mjs [--fps 30] [--pr 1] [--out build/frames] [--from 0] [--to N] [--workers 1] [--encode out.mp4]
+//   node scripts/render.mjs [--ep ep01] [--fps 30] [--pr 1] [--out build/<ep>/frames] [--from 0] [--to N] [--workers 1] [--encode out.mp4] [--audio wav]
 // Frames that already exist are skipped, so an interrupted render can be resumed.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,13 +9,14 @@ import { launch } from './browser.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, arr) => (v.startsWith('--') ? [...a, [v.slice(2), arr[i + 1]]] : a), []));
 const pr = Number(args.pr || 1);
-const outDir = args.out || 'build/frames';
+const ep = args.ep || 'ep01';
+const outDir = args.out || `build/${ep}/frames`;
 const workers = Number(args.workers || 1);
 const fmt = args.format || 'jpg';
 fs.mkdirSync(outDir, { recursive: true });
 
 const server = await startServer();
-const base = `http://127.0.0.1:${server.address().port}/index.html?pr=${pr}`;
+const base = `http://127.0.0.1:${server.address().port}/index.html?pr=${pr}&ep=${ep}`;
 const browser = await launch();
 
 async function openPage() {
@@ -59,7 +60,7 @@ await browser.close();
 server.close();
 
 if (args.encode) {
-  const audio = args.audio || 'build/soundtrack.wav';
+  const audio = args.audio || `build/${ep}/soundtrack.wav`;
   const ff = ['-y', '-framerate', String(fps), '-i', path.join(outDir, `f_%05d.${fmt}`)];
   if (fs.existsSync(audio)) ff.push('-i', audio);
   ff.push('-c:v', 'libx264', '-preset', 'slow', '-crf', String(args.crf || 18), '-pix_fmt', 'yuv420p', '-profile:v', 'high',

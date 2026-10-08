@@ -1,18 +1,15 @@
-// 20" forged twin-spoke wheels, run-flat tyres, cross-drilled two-piece rotors
-// and six/four-piston monobloc calipers.
+// Forged twin-spoke wheels, tyres, cross-drilled two-piece rotors and monobloc
+// calipers. Sizes come from the car's wheel spec (see src/cars/*/car.js).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture } from './textures.js';
 
-const RIM_R = 0.254;
-const TYRE_R = 0.356;
-
-function tyreGeometry(width) {
+function tyreGeometry(width, RIM_R, TYRE_R) {
   const h = width / 2;
   const pts = [];
   const prof = [
     [RIM_R + 0.006, -h + 0.014], [RIM_R + 0.025, -h - 0.002], [RIM_R + 0.055, -h - 0.008],
-    [0.312, -h - 0.007], [0.334, -h + 0.002], [0.348, -h + 0.014], [0.3545, -h + 0.03],
+    [TYRE_R - 0.044, -h - 0.007], [TYRE_R - 0.022, -h + 0.002], [TYRE_R - 0.008, -h + 0.014], [TYRE_R - 0.0015, -h + 0.03],
   ];
   // tread with four circumferential grooves
   const grooves = [-0.37, -0.12, 0.12, 0.37].map((g) => g * width);
@@ -54,7 +51,7 @@ function taperedBar(p0, p1, w0, w1, d0, d1, segs = 6) {
   return g.toNonIndexed();
 }
 
-function rimGeometry(width) {
+function rimGeometry(width, RIM_R, spokes, split) {
   const h = width / 2;
   // barrel + lips
   const prof = [
@@ -68,10 +65,10 @@ function rimGeometry(width) {
   const parts = [barrel.toNonIndexed()];
   const face = h - 0.008;
   const dish = 0.055;
-  for (let k = 0; k < 6; k++) {
-    const base = (k / 6) * Math.PI * 2;
+  for (let k = 0; k < spokes; k++) {
+    const base = (k / spokes) * Math.PI * 2;
     for (const s of [-1, 1]) {
-      const aIn = base + s * 0.05, aOut = base + s * 0.135;
+      const aIn = base + s * split[0], aOut = base + s * split[1];
       const p0 = new THREE.Vector3(Math.cos(aIn) * 0.072, Math.sin(aIn) * 0.072, face - dish);
       const p1 = new THREE.Vector3(Math.cos(aOut) * (RIM_R - 0.012), Math.sin(aOut) * (RIM_R - 0.012), face - 0.004);
       parts.push(taperedBar(p0, p1, 0.026, 0.019, 0.034, 0.022));
@@ -102,8 +99,7 @@ function lugGeometry(width) {
   return mergeGeometries(parts, false);
 }
 
-function discGeometry(radius, thick) {
-  const inner = 0.125;
+function discGeometry(radius, thick, inner = 0.125) {
   const prof = [
     [inner, -thick / 2], [radius, -thick / 2], [radius, thick / 2], [inner, thick / 2],
   ].map(([r, a]) => new THREE.Vector2(r, a));
@@ -112,8 +108,8 @@ function discGeometry(radius, thick) {
   return g;
 }
 
-function hatGeometry(depth) {
-  const prof = [[0.126, 0], [0.122, 0.006], [0.10, 0.012], [0.095, depth], [0.04, depth + 0.004], [0.0, depth + 0.004]]
+function hatGeometry(depth, k = 1) {
+  const prof = [[0.126 * k, 0], [0.122 * k, 0.006], [0.10 * k, 0.012], [0.095 * k, depth], [0.04 * k, depth + 0.004], [0.0, depth + 0.004]]
     .map(([r, a]) => new THREE.Vector2(r, a));
   const g = new THREE.LatheGeometry(prof, 64);
   g.rotateX(Math.PI / 2);
@@ -134,9 +130,9 @@ function caliperGeometry(discR, span, depth) {
   return g;
 }
 
-let sharedMats = null;
-export function wheelMaterials() {
-  if (sharedMats) return sharedMats;
+const matCache = new Map();
+export function wheelMaterials(spec) {
+  if (matCache.has(spec)) return matCache.get(spec);
   const tread = canvasTexture(512, 128, (ctx, w, h) => {
     ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = '#303030'; ctx.lineWidth = 3;
@@ -156,7 +152,7 @@ export function wheelMaterials() {
     ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     for (let r = 300; r < 512; r += 3) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
     ctx.fillStyle = '#111';
-    for (let k = 0; k < 48; k++) {
+    for (let k = 0; k < (spec.drilled === false ? 0 : 48); k++) {
       const a = (k / 48) * Math.PI * 2;
       for (let j = 0; j < 3; j++) {
         const r = 360 + j * 46;
@@ -165,41 +161,43 @@ export function wheelMaterials() {
       }
     }
   });
-  sharedMats = {
+  const mats = {
     tyre: new THREE.MeshPhysicalMaterial({ color: 0x141414, roughness: 0.82, metalness: 0, bumpMap: tread, bumpScale: 1.5, sheen: 0.3, sheenRoughness: 0.8, sheenColor: 0x222222 }),
-    rim: new THREE.MeshPhysicalMaterial({ color: 0x24262a, roughness: 0.28, metalness: 1.0, clearcoat: 1, clearcoatRoughness: 0.08 }),
+    rim: new THREE.MeshPhysicalMaterial({ color: spec.rimColor, roughness: 0.28, metalness: 1.0, clearcoat: 1, clearcoatRoughness: 0.08 }),
     lug: new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.2, metalness: 1.0 }),
     disc: new THREE.MeshStandardMaterial({ color: 0xd0d2d6, map: drilled, roughness: 0.48, metalness: 0.55 }),
     hat: new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.35, metalness: 0.9 }),
-    caliper: new THREE.MeshPhysicalMaterial({ color: 0xb3121b, roughness: 0.35, metalness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.1 }),
+    caliper: new THREE.MeshPhysicalMaterial({ color: spec.caliperColor, roughness: 0.35, metalness: spec.caliperMetal ?? 0.2, clearcoat: 1.0, clearcoatRoughness: 0.1 }),
   };
-  return sharedMats;
+  matCache.set(spec, mats);
+  return mats;
 }
 
 /**
  * One corner: returns { group, tyre, rim, brake } with the wheel axis along Z.
  * side = +1 for the right-hand wheels (outer face towards +Z), -1 for the left.
  */
-export function makeCorner({ front, side }) {
-  const m = wheelMaterials();
-  const width = front ? 0.255 : 0.285;
-  const discR = front ? 0.195 : 0.19;
+export function makeCorner({ front, side, spec }) {
+  const m = wheelMaterials(spec);
+  const axle = front ? spec.front : spec.rear;
+  const { width, discR } = axle;
   const group = new THREE.Group();
   const wheel = new THREE.Group();
-  const tyre = new THREE.Mesh(tyreGeometry(width), m.tyre);
-  const rim = new THREE.Mesh(rimGeometry(width), m.rim);
+  const tyre = new THREE.Mesh(tyreGeometry(width, spec.rimR, spec.tyreR), m.tyre);
+  const rim = new THREE.Mesh(rimGeometry(width, spec.rimR, spec.spokes, spec.split), m.rim);
   const lugs = new THREE.Mesh(lugGeometry(width), m.lug);
   wheel.add(tyre, rim, lugs);
   const brake = new THREE.Group();
-  const disc = new THREE.Mesh(discGeometry(discR, front ? 0.034 : 0.03), m.disc);
+  const inner = axle.discInner ?? 0.125;
+  const disc = new THREE.Mesh(discGeometry(discR, axle.discT, inner), m.disc);
   // planar UVs for the drilled pattern
   const dp = disc.geometry.attributes.position;
   const uv = new Float32Array(dp.count * 2);
   for (let i = 0; i < dp.count; i++) { uv[i * 2] = dp.getX(i) / (2 * discR) + 0.5; uv[i * 2 + 1] = dp.getY(i) / (2 * discR) + 0.5; }
   disc.geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  const hat = new THREE.Mesh(hatGeometry(0.045), m.hat);
+  const hat = new THREE.Mesh(hatGeometry(0.045, inner / 0.125), m.hat);
   hat.position.z = 0.012;
-  const cal = new THREE.Mesh(caliperGeometry(discR, front ? 1.2 : 1.0, front ? 0.085 : 0.07), m.caliper);
+  const cal = new THREE.Mesh(caliperGeometry(discR, axle.calSpan, axle.calDepth), m.caliper);
   cal.rotation.z = side > 0 ? Math.PI * 0.86 : Math.PI * 0.14;
   brake.add(disc, hat, cal);
   brake.position.z = -0.035;
@@ -209,5 +207,3 @@ export function makeCorner({ front, side }) {
   group.userData = { wheel, brake, tyre, rim, disc, caliper: cal };
   return group;
 }
-
-export const WHEEL = { RIM_R, TYRE_R };

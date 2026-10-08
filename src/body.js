@@ -1,8 +1,7 @@
 // GT-R body shell: loads the mesh baked by model/build_body.py and builds three
 // materials on top of it (paint, glass, x-ray ghost). Material regions come
-// from BODY_MASKS_GLSL and are resolved per pixel.
+// from the car's masks module (GLSL + a CPU glass classifier) and are resolved per pixel.
 import * as THREE from 'three';
-import { BODY_MASKS_GLSL, glassDistance } from './bodyMasks.js';
 
 export const bodyUniforms = {
   uCut: { value: 99 },        // paint is drawn where x < uCut, x-ray where x > uCut
@@ -37,7 +36,7 @@ const VERT_MAIN = /* glsl */`
 vOP = position; vON = normal;
 `;
 
-const FRAG_PARS = /* glsl */`
+const fragPars = (masksGLSL) => /* glsl */`
 uniform float uCut;
 uniform float uTail;
 uniform float uHead;
@@ -54,7 +53,7 @@ float hexEdge(vec2 p) {
   vec2 q = abs(g);
   return 0.5 - max(dot(q, r * 0.5), q.x); // 0 at the cell edge
 }
-${BODY_MASKS_GLSL}
+${masksGLSL}
 `;
 
 function paintFragMain(mode) {
@@ -112,19 +111,19 @@ function paintFragMain(mode) {
   `;
 }
 
-function patchPaint(material, mode) {
+function patchPaint(material, mode, masks) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, bodyUniforms);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_PARS)
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + VERT_MAIN);
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + FRAG_PARS)
+      .replace('#include <common>', '#include <common>\n' + fragPars(masks.GLSL))
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n' + paintFragMain(mode))
       .replace('material.clearcoat = clearcoat;', 'material.clearcoat = ccOut;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += emis;');
   };
-  material.customProgramCacheKey = () => 'gtr-paint-' + mode;
+  material.customProgramCacheKey = () => `${masks.id}-paint-${mode}`;
   material.defines = {};
 }
 
@@ -137,21 +136,21 @@ export function setCutEnabled(mats, on) {
   }
 }
 
-export function makeBodyMaterials(paintColor = 0x8a9097) {
+export function makeBodyMaterials(paintColor, masks, paintOpts = {}) {
   const paintParams = {
     color: paintColor, metalness: 0.55, roughness: 0.34,
-    clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0,
+    clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0, ...paintOpts,
   };
   const paint = new THREE.MeshPhysicalMaterial(paintParams);
-  patchPaint(paint, 0);
+  patchPaint(paint, 0, masks);
   const border = new THREE.MeshPhysicalMaterial({ ...paintParams, side: THREE.DoubleSide });
-  patchPaint(border, 2);
+  patchPaint(border, 2, masks);
   const shell = new THREE.MeshBasicMaterial({ color: 0x030303, side: THREE.BackSide });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x020304, metalness: 0.0, roughness: 0.02, clearcoat: 1.0, clearcoatRoughness: 0.0,
     transparent: true, opacity: 0.62, depthWrite: false, envMapIntensity: 2.2,
   });
-  patchPaint(glass, 1);
+  patchPaint(glass, 1, masks);
 
   const xray = new THREE.ShaderMaterial({
     uniforms: bodyUniforms,
@@ -187,7 +186,7 @@ export function makeBodyMaterials(paintColor = 0x8a9097) {
   return { paint, border, glass, shell, xray };
 }
 
-export function makeBody(geometry, mats) {
+export function makeBody(geometry, mats, masks) {
   const group = new THREE.Group();
   group.name = 'body';
   // split the shell: triangles near the glass need the per-pixel discard, the rest
@@ -197,7 +196,7 @@ export function makeBody(geometry, mats) {
   for (let v = 0; v < nearGlass.length; v++) {
     const y = pos[v * 3 + 1];
     if (y < 0.85) continue;
-    nearGlass[v] = glassDistance(pos[v * 3], y, pos[v * 3 + 2], nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]) < 0.035 ? 1 : 0;
+    nearGlass[v] = masks.glassDistance(pos[v * 3], y, pos[v * 3 + 2], nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]) < 0.035 ? 1 : 0;
   }
   const main = [], edge = [];
   for (let i = 0; i < idx.length; i += 3) {

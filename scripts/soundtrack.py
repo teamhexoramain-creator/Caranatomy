@@ -6,7 +6,7 @@ plucked arpeggio) arranged around the storyboard sections. SFX (risers,
 impacts, whooshes, UI blips, x-ray scan, turbo spool, V6 rev + blow-off) are
 placed on the cue list exported from src/story.js.
 
-Usage: python3 scripts/soundtrack.py cues.json out.wav
+Usage: python3 scripts/soundtrack.py build/<ep>/cues.json build/<ep>/soundtrack.wav
 """
 import json
 import sys
@@ -217,14 +217,14 @@ def v6_rev(dur=2.8):
 
 
 # ------------------------------------------------------------------ arrangement
-def build(cues, dur=50.0):
+def build(cues, dur=50.0, transpose=0):
     mix = Mix(dur)
     music = Mix(dur)
     beat = 0.5
     grid0 = 8.9 % beat
     sections = {"intro": (0, 6.2), "scan": (6.2, 8.9), "groove": (8.9, 38.9), "break": (38.9, 43.6), "outro": (43.6, dur)}
-    prog = [[50, 53, 57, 62], [46, 50, 53, 58], [53, 57, 60, 65], [48, 52, 55, 60]]  # Dm Bb F C
-    roots = [38, 34, 41, 36]
+    prog = [[n + transpose for n in c] for c in [[50, 53, 57, 62], [46, 50, 53, 58], [53, 57, 60, 65], [48, 52, 55, 60]]]  # Dm Bb F C
+    roots = [r + transpose for r in [38, 34, 41, 36]]
     bar = beat * 4
     # pads over the whole piece (two bars per chord)
     tt = 0.0
@@ -282,7 +282,7 @@ def build(cues, dur=50.0):
     music.L *= duck
     music.R *= duck
     # outro: final sustained chord with gentle fade
-    music.add(pad_chord([38, 50, 57, 62, 65], 6.6, 1500), 43.6, 0.3)
+    music.add(pad_chord([n + transpose for n in [38, 50, 57, 62, 65]], 6.6, 1500), 43.6, 0.3)
     fade = np.ones(mix.n)
     tail = int(1.2 * SR)
     fade[-tail:] = np.linspace(1, 0, tail) ** 1.5
@@ -317,10 +317,16 @@ def build(cues, dur=50.0):
 
 
 def main():
-    cues = json.load(open(sys.argv[1]))
+    global rng
+    data = json.load(open(sys.argv[1]))
     out = sys.argv[2]
-    dur = float(sys.argv[3]) if len(sys.argv) > 3 else 50.0
-    audio = build(cues, dur)
+    music = {}
+    if isinstance(data, dict):  # {duration, music: {seed, transpose}, cues}
+        cues, dur, music = data["cues"], float(data["duration"]), data.get("music", {})
+    else:
+        cues, dur = data, float(sys.argv[3]) if len(sys.argv) > 3 else 50.0
+    rng = np.random.default_rng(music.get("seed", 35))
+    audio = build(cues, dur, music.get("transpose", 0))
     pcm = (np.clip(audio, -1, 1) * 32767).astype("<i2")
     with wave.open(out, "wb") as w:
         w.setnchannels(2)

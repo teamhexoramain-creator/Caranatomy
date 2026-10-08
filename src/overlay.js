@@ -1,6 +1,6 @@
 // HTML/CSS motion-graphics layer drawn over the WebGL canvas. Every style is a
 // pure function of t, so screenshots of the page are deterministic frames.
-import { SEGMENTS, segTime, T, DURATION, PAGE } from './story.js';
+import { SEGMENTS, segTime, T, DURATION, PAGE, EP } from './story.js';
 import { clamp01, smooth, window01, easeOut, easeOutBack, lerp } from './anim.js';
 
 const h = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
@@ -9,17 +9,18 @@ export class Overlay {
   constructor(root) {
     this.root = root;
     this.frame = root.appendChild(h('<div class="o frame"><i></i><i></i><i></i><i></i></div>'));
+    const X = EP.text;
     this.intro = root.appendChild(h(`
       <div class="o intro">
-        <div class="tag"><b></b>${PAGE} <span>· EP.01</span></div>
-        <div class="make">NISSAN</div>
-        <div class="model"><div class="gtr">GT-R</div><div class="r35">R35</div></div>
-        <div class="nick">“GODZILLA”</div>
-        <div class="si">කාර් එකක් ඇතුළේ මොනවද තියෙන්නේ?</div>
+        <div class="tag"><b></b>${PAGE} <span>· ${EP.label}</span></div>
+        <div class="make">${X.make}</div>
+        <div class="model"><div class="gtr">${X.model}</div><div class="r35">${X.badge}</div></div>
+        <div class="nick">${X.nick}</div>
+        <div class="si">${X.hook}</div>
       </div>`));
     this.header = root.appendChild(h(`
       <div class="o header">
-        <div class="row"><div class="brand">GT-R <span>R35</span> · ANATOMY</div><div class="ep">EP.01</div></div>
+        <div class="row"><div class="brand">${X.brand}</div><div class="ep">${EP.label}</div></div>
         <div class="bars">${SEGMENTS.map(() => '<div><span></span></div>').join('')}</div>
       </div>`));
     this.bars = [...this.header.querySelectorAll('.bars span')];
@@ -53,11 +54,9 @@ export class Overlay {
       </svg>`));
     this.outro = root.appendChild(h(`
       <div class="o outro">
-        <div class="make">NISSAN</div>
-        <div class="gtr">GT-R<span>R35</span></div>
-        <div class="specs">
-          <div><b>570</b><i>PS</i></div><div><b>637</b><i>NM</i></div><div><b>315</b><i>KM/H</i></div><div><b>AWD</b><i>ATTESA</i></div>
-        </div>
+        <div class="make">${X.make}</div>
+        <div class="gtr">${X.model}<span>${X.badge}</span></div>
+        <div class="specs">${X.outroSpecs.map(([v, u]) => `<div><b>${v}</b><i>${u}</i></div>`).join('')}</div>
       </div>`));
     this.cta = root.appendChild(h(`
       <div class="o cta">
@@ -65,7 +64,7 @@ export class Overlay {
         <div class="si">ඊළඟට මොන කාර් එකේ ඇනටමි එකද? Comment කරන්න</div>
         <div class="pill">FOLLOW ${PAGE}</div>
       </div>`));
-    this.disc = root.appendChild(h('<div class="o disclaimer">Fan-made 3D illustration · not affiliated with Nissan · specs: GT-R R35 MY2017+</div>'));
+    this.disc = root.appendChild(h(`<div class="o disclaimer">${X.disclaimer}</div>`));
   }
 
   /** proj(name) -> {x, y, visible} screen-space anchor of a system */

@@ -1,14 +1,13 @@
 {
   "name": "caranatomy",
   "version": "1.0.0",
-  "description": "3D car anatomy animations for social video — EP.01 Nissan GT-R R35",
+  "description": "3D car anatomy animations for social video \u2014 EP.01 Nissan GT-R R35",
   "scripts": {
-    "build:model": "python3 model/build_body.py 0.006",
-    "cues": "node -e \"import('./src/story.js').then(m=>require('fs').writeFileSync('build/cues.json',JSON.stringify(m.cues())))\"",
-    "build:audio": "npm run cues && python3 scripts/soundtrack.py build/cues.json build/soundtrack.wav 50",
+    "build:model": "TRIS=700000 python3 model/build_body.py ${CAR:-gtr-r35} 0.006",
+    "build:audio": "node scripts/cues.mjs ${EP:-ep01} && python3 scripts/soundtrack.py build/${EP:-ep01}/cues.json build/${EP:-ep01}/soundtrack.wav",
     "serve": "node scripts/server.mjs 8080",
-    "preview": "node scripts/render.mjs --fps 15 --pr 0.5 --out build/preview --encode build/preview.mp4",
-    "render": "node scripts/render.mjs --fps 30 --pr 1 --out build/frames --encode build/gtr-r35-anatomy.mp4"
+    "preview": "node scripts/render.mjs --ep ${EP:-ep01} --fps 15 --pr 0.5 --out build/${EP:-ep01}/preview --encode build/${EP:-ep01}/preview.mp4",
+    "render": "node scripts/render.mjs --ep ${EP:-ep01} --fps 30 --pr 1 --encode renders/${EP:-ep01}.mp4"
   },
   "repository": {
     "type": "git",

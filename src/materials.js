@@ -3,11 +3,22 @@
 import * as THREE from 'three';
 import { canvasTexture } from './textures.js';
 
-function noiseTexture(size, scale, contrast) {
+// small seeded PRNG so procedural textures are identical on every page load
+function mulberry32(seed) {
+  return () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function noiseTexture(size, scale, contrast, seed = 1) {
+  const rand = mulberry32(seed);
   return canvasTexture(size, size, (ctx, w, h) => {
     const img = ctx.createImageData(w, h);
     for (let i = 0; i < w * h; i++) {
-      const v = 128 + (Math.random() - 0.5) * 255 * contrast;
+      const v = 128 + (rand() - 0.5) * 255 * contrast;
       img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
@@ -58,6 +69,9 @@ export function materials() {
     black: new THREE.MeshStandardMaterial({ color: 0x0d0d0e, metalness: 0, roughness: 0.55 }),
     rubber: new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0, roughness: 0.92 }),
     crinkleBlack: new THREE.MeshStandardMaterial({ color: 0x18191c, metalness: 0.3, roughness: 0.6, bumpMap: crinkle, bumpScale: 1.2 }),
+    crinkleRed: new THREE.MeshStandardMaterial({ color: 0x9c0f16, metalness: 0.25, roughness: 0.55, bumpMap: crinkle, bumpScale: 1.4 }),
+    fabric: new THREE.MeshStandardMaterial({ color: 0x1c2330, metalness: 0, roughness: 0.9, bumpMap: crinkle, bumpScale: 0.5 }),
+    goldCal: new THREE.MeshPhysicalMaterial({ color: 0xc9a227, metalness: 0.6, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1 }),
     red: new THREE.MeshPhysicalMaterial({ color: 0xb3121b, metalness: 0.2, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.1 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xd8a64a, metalness: 1, roughness: 0.3, bumpMap: crinkle, bumpScale: 2.0 }),
     titanium: new THREE.MeshPhysicalMaterial({ color: 0xa9adb4, metalness: 1, roughness: 0.24, iridescence: 0.45, iridescenceIOR: 1.6, iridescenceThicknessRange: [300, 420] }),
